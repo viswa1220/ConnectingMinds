@@ -53,11 +53,13 @@ app.delete("/getuser", async (req, res) => {
 
 //update
 app.patch("/getuser", async (req, res) => {
-   const userId = req.body.userId;
+  const userId = req.body.userId;
   const data = req.body;
   console.log(data);
   try {
-    const user = await User.findByIdAndUpdate({ _id: userId },data);
+    const user = await User.findByIdAndUpdate({ _id: userId }, data, {
+      runValidators: true,
+    });
     res.send("user Updated successfully");
   } catch {
     res.status(400).send("Something went wrong");
