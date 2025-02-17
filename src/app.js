@@ -9,6 +9,11 @@ app.post("/signup", async (req, res) => {
   //creating a new instance of user model
   const user = new User(req.body);
   try {
+    if (user?.skills.length > 20) {
+      throw new Error("more than 20 skills not allowed");
+    }
+    
+    
     await user.save();
     res.send("user added");
   } catch (err) {
@@ -52,11 +57,32 @@ app.delete("/getuser", async (req, res) => {
 });
 
 //update
-app.patch("/getuser", async (req, res) => {
-  const userId = req.body.userId;
+app.patch("/getuser/:userId", async (req, res) => {
+  const userId = req.params?.userId;
   const data = req.body;
-  console.log(data);
+
   try {
+    const allowedUpdates = [
+      "userId",
+      "skills",
+      "photoUrl",
+      "about",
+      "gender",
+      "age",
+      "firstName",
+      "LastName",
+      "experience",
+    ];
+    console.log(data);
+    const isUpdateAllowed = Object.keys(data).every((k) =>
+      allowedUpdates.includes(k)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Update not allowed");
+    }
+    if (data?.skills.length > 20) {
+      throw new Error("more than 20 skills not allowed");
+    }
     const user = await User.findByIdAndUpdate({ _id: userId }, data, {
       runValidators: true,
     });

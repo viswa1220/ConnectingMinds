@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const validate = require("validator");
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -14,10 +15,20 @@ const userSchema = new mongoose.Schema(
       trim: true,
       required: true,
       unique: true,
+      validate(value) {
+        if (!validate.isEmail(value)) {
+          throw new Error("Email format invalid");
+        }
+      },
     },
     password: {
       type: String,
       required: true,
+      validate(value) {
+        if (!validate.isStrongPassword(value)) {
+          throw new Error("Please Enter a Strong Password");
+        }
+      },
     },
     age: {
       type: Number,
@@ -34,6 +45,11 @@ const userSchema = new mongoose.Schema(
     photoUrl: {
       type: String,
       default: "https://whiteklay.com/prod-dummy-image-1/",
+      validate(value) {
+        if (!validate.isURL(value)) {
+          throw new Error("Invalid Url");
+        }
+      },
     },
     about: {
       type: String,
