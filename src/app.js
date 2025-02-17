@@ -3,19 +3,11 @@ const { adminAuth } = require("./middlewares/auth");
 const connectDb = require("./config/database");
 const app = express();
 const User = require("./models/user");
+app.use(express.json());
 /* get : will match only /user  */
 app.post("/signup", async (req, res) => {
-  const userObject = {
-    firstName: "Ms",
-    lastName: "Dhoni",
-    emailId: "Ms@gmail.com",
-    password: "Viswa@123",
-    age: 23,
-    gender: "Male",
-    experience: 2,
-  };
   //creating a new instance of user model
-  const user = new User(userObject);
+  const user = new User(req.body);
   try {
     await user.save();
     res.send("user added");
