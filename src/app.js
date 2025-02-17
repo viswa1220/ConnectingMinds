@@ -16,8 +16,14 @@
  app.use("/test",(req,res)=>{
     res.send("hello from server!!!");
  })
- app.use("/",(req,res)=>{
-   res.send("hello Stranger!!!");
+
+
+ // if there is no response it will hang and next will be used to go for second response;
+ app.use("/stranger",(req,res,next)=>{
+  // res.send("hello Stranger!!!");
+   next()
+},(req,res)=>{
+   res.send("hello Stranger!!! 2");
 })
  //listen port
  app.listen(3000, () => {
