@@ -3,23 +3,47 @@ const { adminAuth } = require("./middlewares/auth");
 const connectDb = require("./config/database");
 const app = express();
 const User = require("./models/user");
+const { validateSignUpData } = require("./utils/validation");
+const bcrypt = require("bcrypt");
 app.use(express.json());
 
 app.post("/signup", async (req, res) => {
-  //creating a new instance of user model
-  const user = new User(req.body);
   try {
-    if (user?.skills.length > 20) {
-      throw new Error("more than 20 skills not allowed");
-    }
-    
-    
+    //validate
+    validateSignUpData(req);
+    //encrypt
+    const { firstName, lastName, emailId, password } = req.body;
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      password: passwordHash,
+    });
     await user.save();
     res.send("user added");
   } catch (err) {
-    res.status(401).send("Error in User Adding" + err.message);
+    res.status(401).send("Error :" + err.message);
   }
 });
+app.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    const user = await User.findOne({ emailId: emailId });
+    if (!user) {
+      throw new Error("User Not Found");
+    }
+    const isPasswordvalid = await bcrypt.compare(password, user.password);
+    if (isPasswordvalid) {
+      res.send("Login Success!!!");
+    } else {
+      throw new Error("Password doesn't match");
+    }
+  } catch (err) {
+    res.status(401).send("Error :" + err.message);
+  }
+});
+
 app.get("/feed", async (req, res) => {
   try {
     const user = await User.find({});
