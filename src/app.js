@@ -37,12 +37,11 @@ app.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("User Not Found");
     }
-    const isPasswordvalid = await bcrypt.compare(password, user.password);
+   const isPasswordvalid = await user.validatePassword(password);
     if (isPasswordvalid) {
-      const token = await jwt.sign({ _id: user._id }, "Dev@cm$12052000");
-      console.log(token);
+      const token = await user.getJWT();
       res.cookie("token", token);
-      res.send("Login Success!!!");
+      res.send("Login Successful!!!");
     } else {
       throw new Error("Password doesn't match");
     }
@@ -133,7 +132,7 @@ app.get("/profile", userAuth, async (req, res) => {
 });
 app.post("/sendConnectionRequest", userAuth, async (req, res) => {
   try {
-    const user=req.user
+    const user = req.user;
     res.send(user.firstName + "   sent the connect request!");
   } catch {}
 });
