@@ -5,7 +5,11 @@ const app = express();
 const User = require("./models/user");
 const { validateSignUpData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const cookie = require("cookie-parser");
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signup", async (req, res) => {
   try {
@@ -35,6 +39,9 @@ app.post("/login", async (req, res) => {
     }
     const isPasswordvalid = await bcrypt.compare(password, user.password);
     if (isPasswordvalid) {
+      const token = await jwt.sign({ _id: user._id }, "Dev@cm$12052000");
+      console.log(token);
+      res.cookie("token", token);
       res.send("Login Success!!!");
     } else {
       throw new Error("Password doesn't match");
@@ -114,6 +121,16 @@ app.patch("/getuser/:userId", async (req, res) => {
   } catch {
     res.status(400).send("Something went wrong");
   }
+});
+
+app.get("/profile", async (req, res) => {
+  const cookies = req.cookies;
+  const { token } = cookies;
+  const decodedmessage = await jwt.verify(token, "Dev@cm$12052000");
+  console.log(decodedmessage);
+  const { _id } = decodedmessage;
+  console.log("Logged in user is :" + _id)
+  res.send("Reading Cookies");
 });
 
 connectDb()
