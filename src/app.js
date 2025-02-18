@@ -7,7 +7,7 @@ const { validateSignUpData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const cookie = require("cookie-parser");
+const { userAuth } = require("./middlewares/auth");
 app.use(express.json());
 app.use(cookieParser());
 
@@ -123,16 +123,20 @@ app.patch("/getuser/:userId", async (req, res) => {
   }
 });
 
-app.get("/profile", async (req, res) => {
-  const cookies = req.cookies;
-  const { token } = cookies;
-  const decodedmessage = await jwt.verify(token, "Dev@cm$12052000");
-  console.log(decodedmessage);
-  const { _id } = decodedmessage;
-  console.log("Logged in user is :" + _id)
-  res.send("Reading Cookies");
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    res.send(user);
+  } catch (err) {
+    res.status(400).send("ERROR :" + err.message);
+  }
 });
-
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  try {
+    const user=req.user
+    res.send(user.firstName + "   sent the connect request!");
+  } catch {}
+});
 connectDb()
   .then(() => {
     console.log("Connected to mongo Db");
