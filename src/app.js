@@ -3,15 +3,24 @@ const { adminAuth } = require("./middlewares/auth");
 const connectDb = require("./config/database");
 const app = express();
 const User = require("./models/user");
-const { validateSignUpData } = require("./utils/validation");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+
+
 const cookieParser = require("cookie-parser");
-const { userAuth } = require("./middlewares/auth");
-app.use(express.json());
+const { userAuth } = require("./middlewares/auth");app.use(express.json());
 app.use(cookieParser());
 
-app.post("/signup", async (req, res) => {
+
+
+const authRouter = require("./routes/auth")
+const profileRouter=require("./routes/profile")
+const requestRouter = require("./routes/request")
+
+app.use("/",authRouter);
+app.use("/",profileRouter);
+app.use("/",requestRouter);
+
+
+/* app.post("/signup", async (req, res) => {
   try {
     //validate
     validateSignUpData(req);
@@ -29,8 +38,8 @@ app.post("/signup", async (req, res) => {
   } catch (err) {
     res.status(401).send("Error :" + err.message);
   }
-});
-app.post("/login", async (req, res) => {
+}); */
+/* app.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
     const user = await User.findOne({ emailId: emailId });
@@ -48,9 +57,9 @@ app.post("/login", async (req, res) => {
   } catch (err) {
     res.status(401).send("Error :" + err.message);
   }
-});
+}); */
 
-app.get("/feed", async (req, res) => {
+/* app.get("/feed", async (req, res) => {
   try {
     const user = await User.find({});
     if (user.length === 0) {
@@ -120,22 +129,22 @@ app.patch("/getuser/:userId", async (req, res) => {
   } catch {
     res.status(400).send("Something went wrong");
   }
-});
+}); */
 
-app.get("/profile", userAuth, async (req, res) => {
+/* app.get("/profile", userAuth, async (req, res) => {
   try {
     const user = req.user;
     res.send(user);
   } catch (err) {
     res.status(400).send("ERROR :" + err.message);
   }
-});
-app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+}); */
+/* app.post("/sendConnectionRequest", userAuth, async (req, res) => {
   try {
     const user = req.user;
     res.send(user.firstName + "   sent the connect request!");
   } catch {}
-});
+}); */
 connectDb()
   .then(() => {
     console.log("Connected to mongo Db");
