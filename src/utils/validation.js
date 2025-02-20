@@ -13,6 +13,25 @@ const validateSignUpData = (req) => {
   }
 };
 
+const vaidateProfileEditData =(req)=>{
+  const allowedUpdates = [
+    "skills",
+    "photoUrl",
+    "about",
+    "gender",
+    "age",
+    "firstName",
+    "LastName",
+    "experience",
+  ];
+
+  const isUpdateAllowed = Object.keys(req.body).every((k) =>
+    allowedUpdates.includes(k)
+  );
+  return isUpdateAllowed;
+}
+
 module.exports = {
   validateSignUpData,
+  vaidateProfileEditData
 };
