@@ -4,6 +4,7 @@ const { validateSignUpData } = require("../utils/validation");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const { userAuth } = require("../middlewares/auth");
+const safe_data = "firstName lastName about age gender skills experience";
 
 authRouter.post("/signup", async (req, res) => {
   try {
@@ -35,7 +36,8 @@ authRouter.post("/login", async (req, res) => {
     if (isPasswordvalid) {
       const token = await user.getJWT();
       res.cookie("token", token);
-      res.send("Login Successful!!!");
+      
+      res.send(user);
     } else {
       throw new Error("Password doesn't match");
     }

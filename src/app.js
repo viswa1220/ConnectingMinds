@@ -3,6 +3,13 @@ const { adminAuth } = require("./middlewares/auth");
 const connectDb = require("./config/database");
 const app = express();
 const User = require("./models/user");
+const cors = require("cors");
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 const cookieParser = require("cookie-parser");
 const { userAuth } = require("./middlewares/auth");
