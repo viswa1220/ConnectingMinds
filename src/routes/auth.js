@@ -18,11 +18,19 @@ authRouter.post("/signup", async (req, res) => {
       lastName,
       emailId,
       password: passwordHash,
+      age: age || null,
+      gender: gender || "others",
+      photoUrl: photoUrl || "https://whiteklay.com/prod-dummy-image-1/",
+      about: about || "This is a default about",
+      experience: experience || 0,
+      skills: Array.isArray(skills) ? skills : [],
     });
+
     await user.save();
-    res.send("user added");
+
+    res.status(201).json({ message: "User added successfully!", user });
   } catch (err) {
-    res.status(401).send("Error :" + err.message);
+    res.status(400).json({ error: err.message });
   }
 });
 authRouter.post("/login", async (req, res) => {
@@ -36,7 +44,7 @@ authRouter.post("/login", async (req, res) => {
     if (isPasswordvalid) {
       const token = await user.getJWT();
       res.cookie("token", token);
-      
+
       res.send(user);
     } else {
       throw new Error("Password doesn't match");
@@ -53,7 +61,7 @@ authRouter.post("/logout", async (req, res) => {
         expires: new Date(Date.now()),
       })
       .send("Logout Success");
-  } catch(err) {
+  } catch (err) {
     res.status(401).send("Error  :" + err.message);
   }
 });
