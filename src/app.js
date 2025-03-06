@@ -20,11 +20,15 @@ const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request");
 const userRouter = require("./routes/user");
+const projectRouter = require("./routes/projectRouter");
+const taskRouter = require("./routes/taskRouter");
 
+app.use("/api", projectRouter);
 app.use("/", authRouter);
 app.use("/", profileRouter);
-app.use("/", requestRouter);
+app.use("/api", requestRouter);
 app.use("/", userRouter);
+app.use("/api", taskRouter);
 
 /* app.post("/signup", async (req, res) => {
   try {

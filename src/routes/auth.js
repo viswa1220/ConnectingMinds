@@ -8,12 +8,12 @@ const safe_data = "firstName lastName about age gender skills experience";
 
 authRouter.post("/signup", async (req, res) => {
   try {
-    //validate
-    validateSignUpData(req);
-    //encrypt
-    const { firstName, lastName, emailId, password } = req.body;
+    const { firstName, lastName, emailId, password, age, gender, photoUrl, about, experience, skills, techStack, interests } = req.body;
+    if (!interests || interests.length === 0) {
+      throw new Error("At least one interest is required.");
+    }
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = new User({
+    const newUser = new User({
       firstName,
       lastName,
       emailId,
@@ -24,15 +24,18 @@ authRouter.post("/signup", async (req, res) => {
       about: about || "This is a default about",
       experience: experience || 0,
       skills: Array.isArray(skills) ? skills : [],
+      techStack: Array.isArray(techStack) ? techStack : [],
+      interests: Array.isArray(interests) ? interests : []
     });
 
-    await user.save();
+    await newUser.save();
 
-    res.status(201).json({ message: "User added successfully!", user });
+    res.status(201).json({ message: "User added successfully!", user: newUser });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
 authRouter.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
