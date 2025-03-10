@@ -49,10 +49,18 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
     } = req.query;
     const skip = (page - 1) * limit;
 
+    // Find project IDs where user has already requested to join or been invited
+    const requestedProjectIds = await ProjectJoinRequest.find({
+      userId: loggedUser._id,
+      status: { $in: ["pending", "accepted", "invited"] },
+    }).distinct("projectId");
+
     // Build a dynamic filter object
     const filter = {
-      createdBy: { $ne: loggedUser._id }, // Exclude user's own projects
-      collaborators: { $ne: loggedUser._id }, // Exclude already joined projects
+      createdBy: { $ne: loggedUser._id },        // Exclude user's own projects
+      collaborators: { $ne: loggedUser._id },     // Exclude already joined projects
+      _id: { $nin: requestedProjectIds }, 
+      status: "open",        // Exclude projects with pending, accepted, or invited status
     };
 
     // Search by keywords in title or description
@@ -92,9 +100,11 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
       data: projects,
     });
   } catch (err) {
+    console.error("Error fetching projects feed:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 // Send a join request to a project with a role
 projectRouter.post("/project/join/:projectId", userAuth, async (req, res) => {
   try {
@@ -334,6 +344,41 @@ projectRouter.get(
     }
   }
 );
+// Toggle project status (open/closed)
+projectRouter.patch("/project/:projectId/status", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const { projectId } = req.params;
+    const { status } = req.body; // expected to be "open" or "closed"
+
+    if (!status || (status !== "open" && status !== "closed")) {
+      return res.status(400).json({ message: "Invalid status provided!" });
+    }
+
+    // Find the project
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found!" });
+    }
+
+    // Only the creator can toggle the status
+    if (project.createdBy.toString() !== loggedUser._id.toString()) {
+      return res.status(403).json({ message: "Access denied!" });
+    }
+
+    // Update project status
+    project.status = status;
+    await project.save();
+
+    res.json({
+      message: "Project status updated successfully",
+      data: project,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 projectRouter.get(
   "/project/:projectId/requests/pending",
@@ -657,4 +702,157 @@ projectRouter.get(
     }
   }
 );
+/* // Fetch all projects involving the logged-in user (as creator, collaborator, or any role)
+projectRouter.get("/projects/my-involvement", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Find projects where the user is either the creator or a collaborator
+    const myProjects = await Project.find({
+      $or: [
+        { createdBy: loggedUser._id },           // Projects created by the user
+        { collaborators: loggedUser._id },        // Projects where the user is a collaborator
+        { "otherRoles.userId": loggedUser._id }   // Projects where the user is assigned any role (if you have such a field)
+      ]
+    })
+      .limit(parseInt(limit))
+      .skip(skip)
+      .sort({ createdAt: -1 })                     // Sort by newest first
+      .populate("createdBy", "firstName lastName emailId photoUrl")   // Get creator info
+      .populate("collaborators", "firstName lastName emailId photoUrl") // Get collaborator info
+      .populate("otherRoles.userId", "firstName lastName emailId photoUrl"); // Get other roles info if applicable
+
+    if (myProjects.length === 0) {
+      return res.json({ message: "You are not involved in any projects yet.", data: [] });
+    }
+
+    res.json({
+      message: "Projects involving you fetched successfully!",
+      data: myProjects,
+    });
+  } catch (err) {
+    console.error("Error fetching projects involving the user:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+}); */
+// Fetch all users assigned to a specific project
+// Fetch only collaborators of a specific project excluding the creator
+projectRouter.get("/project/:projectId/users", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const { projectId } = req.params;
+
+    // Check if the project exists
+    const project = await Project.findById(projectId)
+      .populate("createdBy", "firstName lastName emailId photoUrl")
+      .populate("collaborators", "firstName lastName emailId photoUrl");
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found!" });
+    }
+
+    // Check if the logged-in user is authorized to view project users
+    if (
+      project.createdBy._id.toString() !== loggedUser._id.toString() &&
+      !project.collaborators.some(
+        (collaborator) =>
+          collaborator._id.toString() === loggedUser._id.toString()
+      )
+    ) {
+      return res.status(403).json({ message: "Access denied!" });
+    }
+
+    // Filter out the creator from the collaborators list
+    const collaboratorsExcludingCreator = project.collaborators.filter(
+      (collaborator) =>
+        collaborator._id.toString() !== project.createdBy._id.toString()
+    );
+
+    // Prepare a list of collaborators excluding the creator
+    const users = [
+      project.createdBy, // Project creator (separate)
+      ...collaboratorsExcludingCreator, // Collaborators excluding creator
+    ];
+
+    res.json({
+      message: "Collaborators fetched successfully!",
+      data: users,
+    });
+  } catch (err) {
+    console.error("Error fetching project collaborators:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit Project Details
+// Edit Project Details (Partial Update)
+projectRouter.patch("/project/:projectId/edit", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const { projectId } = req.params;
+    const { title, description, skillsRequired, interestsTags } = req.body;
+
+    // Check if project exists and if the logged-in user is the creator
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found!" });
+    }
+
+    if (project.createdBy.toString() !== loggedUser._id.toString()) {
+      return res.status(403).json({ message: "Access denied!" });
+    }
+
+    // Update only the fields that are provided
+    if (title) project.title = title;
+    if (description) project.description = description;
+    if (skillsRequired) project.skillsRequired = skillsRequired;
+    if (interestsTags) project.interestsTags = interestsTags;
+
+    await project.save();
+
+    res.json({
+      message: "Project updated successfully!",
+      data: project,
+    });
+  } catch (err) {
+    console.error("Error updating project:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fetch projects where the user is a collaborator (including projects created by the user)
+projectRouter.get("/projects/my-collaborations", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const myCollaborations = await Project.find({
+      collaborators: loggedUser._id,
+    })
+      .limit(parseInt(limit))
+      .skip(skip)
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "firstName lastName emailId photoUrl")
+      .populate("collaborators", "firstName lastName emailId photoUrl");
+
+    if (myCollaborations.length === 0) {
+      return res.json({ message: "No projects found where you are a collaborator.", data: [] });
+    }
+
+    res.json({
+      message: "Projects where you are a collaborator fetched successfully!",
+      data: myCollaborations,
+    });
+  } catch (err) {
+    console.error("Error fetching collaboration projects:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 module.exports = projectRouter;

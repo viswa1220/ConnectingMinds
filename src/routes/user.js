@@ -89,7 +89,6 @@ userRouter.get("/feed", userAuth, async (req, res) => {
       });
     });
 
-    // Extract projects matching logged user's interests from non-connected users (CASE-INSENSITIVE)
     let interestProjects = [];
     users.forEach((user) => {
       user.projectIdeas.forEach((project) => {
@@ -134,5 +133,20 @@ userRouter.get("/feed", userAuth, async (req, res) => {
       .json({ error: "Internal Server Error", details: err.message });
   }
 });
+
+userRouter.get("/api/user/:userId", userAuth, async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId).select("firstName lastName emailId photoUrl");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User fetched successfully", data: user });
+  } catch (err) {
+    console.error("Error fetching user info:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 module.exports = userRouter;

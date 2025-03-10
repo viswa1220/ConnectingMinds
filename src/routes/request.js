@@ -160,8 +160,8 @@ requestRouter.get("/people/requests", userAuth, async (req, res) => {
         { toUserId: loggedUser._id, type: "people" }
       ]
     })
-      .populate("fromUserId", "firstName lastName emailId photoUrl")
-      .populate("toUserId", "firstName lastName emailId photoUrl");
+      .populate("fromUserId", "firstName lastName emailId photoUrl techStack experience about skills")
+      .populate("toUserId", "firstName lastName emailId photoUrl techStack experience about skills");
 
     if (connectionRequests.length === 0) {
       return res.json({ message: "No connection requests found", data: [] });
@@ -201,7 +201,7 @@ requestRouter.get("/people/suggestions", userAuth, async (req, res) => {
       _id: { $nin: Array.from(excludedUserIds) },
       interests: { $in: interests }
     })
-      .select("firstName lastName interests photoUrl about")
+      .select("firstName lastName interests photoUrl about techStack skills experience createdAt")
       .skip(skip)
       .limit(limit);
 
@@ -227,8 +227,8 @@ requestRouter.get("/people/requests/pending", userAuth, async (req, res) => {
         { toUserId: loggedUser._id, status: "pending", type: "people" }
       ]
     })
-      .populate("fromUserId", "firstName lastName photoUrl")
-      .populate("toUserId", "firstName lastName photoUrl");
+      .populate("fromUserId", "firstName lastName photoUrl techStack")
+      .populate("toUserId", "firstName lastName photoUrl techStack");
 
     if (pendingRequests.length === 0) {
       return res.json({ message: "No pending requests found", data: [] });
@@ -243,7 +243,7 @@ requestRouter.get("/people/requests/pending", userAuth, async (req, res) => {
   }
 });
 
-requestRouter.get("/api/people/connections", userAuth, async (req, res) => {
+requestRouter.get("/people/connections", userAuth, async (req, res) => {
   try {
     const loggedUser = req.user;
 
@@ -253,8 +253,8 @@ requestRouter.get("/api/people/connections", userAuth, async (req, res) => {
         { toUserId: loggedUser._id, status: "accepted", type: "people" }
       ]
     })
-      .populate("fromUserId", "firstName lastName photoUrl about")
-      .populate("toUserId", "firstName lastName photoUrl about");
+      .populate("fromUserId", "firstName lastName photoUrl about emailId skills")
+      .populate("toUserId", "firstName lastName photoUrl about emailId skills");
 
     const connectedUsers = connections.map(conn =>
       conn.fromUserId._id.toString() === loggedUser._id.toString() ? conn.toUserId : conn.fromUserId
