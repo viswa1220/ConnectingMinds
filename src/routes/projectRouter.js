@@ -35,35 +35,28 @@ projectRouter.post("/project/create", userAuth, async (req, res) => {
   }
 });
 
-// Fetch projects for feed excluding user's own projects
-// Fetch projects for feed with search and filter options
 projectRouter.get("/projects/feed", userAuth, async (req, res) => {
   try {
     const loggedUser = req.user;
-    const {
-      page = 1,
-      limit = 10,
-      search = "",
-      skills = "",
-      interests = "",
-    } = req.query;
+    const { page = 1, limit = 10, search = "", skills = "", interests = "" } = req.query;
     const skip = (page - 1) * limit;
 
-    // Find project IDs where user has already requested to join or been invited
     const requestedProjectIds = await ProjectJoinRequest.find({
       userId: loggedUser._id,
       status: { $in: ["pending", "accepted", "invited"] },
     }).distinct("projectId");
 
-    // Build a dynamic filter object
     const filter = {
-      createdBy: { $ne: loggedUser._id },        // Exclude user's own projects
-      collaborators: { $ne: loggedUser._id },     // Exclude already joined projects
-      _id: { $nin: requestedProjectIds }, 
-      status: "open",        // Exclude projects with pending, accepted, or invited status
+      createdBy: { $ne: loggedUser._id },
+      collaborators: { $ne: loggedUser._id },
+      _id: { $nin: requestedProjectIds },
+      status: "open",
+      $or: [
+        { skillsRequired: { $in: loggedUser.interests } },
+        { interestsTags: { $in: loggedUser.interests } }
+      ]
     };
 
-    // Search by keywords in title or description
     if (search.trim()) {
       filter.$or = [
         { title: { $regex: search, $options: "i" } },
@@ -71,39 +64,31 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
       ];
     }
 
-    // Filter by skills required
     if (skills.trim()) {
       const skillsArray = skills.split(",").map((skill) => skill.trim());
       filter.skillsRequired = { $in: skillsArray };
     }
 
-    // Filter by interests
     if (interests.trim()) {
-      const interestsArray = interests
-        .split(",")
-        .map((interest) => interest.trim());
+      const interestsArray = interests.split(",").map((interest) => interest.trim());
       filter.interestsTags = { $in: interestsArray };
-    } else {
-      // Default to user's interests if no specific interests are provided
-      filter.interestsTags = { $in: loggedUser.interests };
     }
 
-    // Fetch projects based on the filter
     const projects = await Project.find(filter)
       .populate("createdBy", "firstName lastName emailId")
       .limit(parseInt(limit))
       .skip(skip)
-      .sort({ createdAt: -1 }); // Newest first
+      .sort({ createdAt: -1 });
 
     res.json({
       message: "Projects fetched successfully",
       data: projects,
     });
   } catch (err) {
-    console.error("Error fetching projects feed:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // Send a join request to a project with a role
 projectRouter.post("/project/join/:projectId", userAuth, async (req, res) => {
