@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const http = require("http");  // ✅ For creating HTTP server
 const socketIo = require("socket.io");  // ✅ Socket.IO integration
@@ -12,7 +13,7 @@ const app = express();
 // Middleware setup
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_ORIGIN,
     credentials: true,
   })
 );
@@ -42,7 +43,7 @@ const server = http.createServer(app);
 // Create Socket.IO server
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_ORIGIN,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -56,7 +57,7 @@ connectDb()
   .then(() => {
     console.log("Connected to MongoDB");
     server.listen(3000, () => {
-      console.log("Server running on http://localhost:3000");
+      console.log("Server running");
     });
   })
   .catch((err) => console.log("MongoDB connection error:", err.message));

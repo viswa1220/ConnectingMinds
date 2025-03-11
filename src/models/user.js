@@ -81,7 +81,19 @@ const userSchema = new mongoose.Schema(
         ref: "project",
       },
     ],
-    
+    // NEW FIELDS for saved and ignored projects:
+    savedProjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "project",
+      },
+    ],
+    ignoredProjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "project",
+      },
+    ],
   },
   {
     timestamps: true,
@@ -91,7 +103,7 @@ const userSchema = new mongoose.Schema(
 // Generate JWT Token
 userSchema.methods.getJWT = async function () {
   const user = this;
-  const token = await jwt.sign({ _id: user._id }, "Dev@cm$12052000", {
+  const token = await jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "10d",
   });
   return token;

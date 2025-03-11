@@ -38,7 +38,13 @@ projectRouter.post("/project/create", userAuth, async (req, res) => {
 projectRouter.get("/projects/feed", userAuth, async (req, res) => {
   try {
     const loggedUser = req.user;
-    const { page = 1, limit = 10, search = "", skills = "", interests = "" } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      skills = "",
+      interests = "",
+    } = req.query;
     const skip = (page - 1) * limit;
 
     const requestedProjectIds = await ProjectJoinRequest.find({
@@ -53,8 +59,8 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
       status: "open",
       $or: [
         { skillsRequired: { $in: loggedUser.interests } },
-        { interestsTags: { $in: loggedUser.interests } }
-      ]
+        { interestsTags: { $in: loggedUser.interests } },
+      ],
     };
 
     if (search.trim()) {
@@ -65,14 +71,25 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
     }
 
     if (skills.trim()) {
-      const skillsArray = skills.split(",").map((skill) => skill.trim());
+      // Convert each skill into a RegExp for case-insensitive exact matching.
+      const skillsArray = skills
+        .split(",")
+        .map((skill) => new RegExp(`^${skill.trim()}$`, "i"));
       filter.skillsRequired = { $in: skillsArray };
     }
 
     if (interests.trim()) {
-      const interestsArray = interests.split(",").map((interest) => interest.trim());
+      // Convert each interest into a RegExp for case-insensitive exact matching.
+      const interestsArray = interests
+        .split(",")
+        .map((interest) => new RegExp(`^${interest.trim()}$`, "i"));
       filter.interestsTags = { $in: interestsArray };
     }
+    // Retrieve the ignored projects from the logged-in user
+    const ignored = loggedUser.ignoredProjects || [];
+
+    // Combine the project IDs to exclude
+    filter._id = { $nin: [...requestedProjectIds, ...ignored] };
 
     const projects = await Project.find(filter)
       .populate("createdBy", "firstName lastName emailId")
@@ -89,6 +106,55 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
   }
 });
 
+// Save project endpoint using $addToSet for atomic update
+projectRouter.post("/project/:projectId/save", userAuth, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    await req.user.constructor.findByIdAndUpdate(req.user._id, {
+      $addToSet: { savedProjects: projectId },
+    });
+    res.json({ message: "Project saved for future reference!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+projectRouter.get("/projects/saved", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const savedIds = loggedUser.savedProjects || [];
+    const ignored = loggedUser.ignoredProjects || [];
+
+    // Fetch only projects that are in savedProjects and NOT in ignoredProjects, and have status "open"
+    const savedProjects = await Project.find({
+      $and: [{ _id: { $in: savedIds } }, { _id: { $nin: ignored } }],
+      status: "open",
+    })
+      .populate("createdBy", "firstName lastName emailId")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      message: "Fetched saved projects successfully",
+      data: savedProjects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ignore project endpoint using $addToSet for atomic update
+projectRouter.post("/project/:projectId/ignore", userAuth, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    await req.user.constructor.findByIdAndUpdate(req.user._id, {
+      $addToSet: { ignoredProjects: projectId },
+    });
+    res.json({
+      message: "Project ignored. It will no longer appear in your feed!",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Send a join request to a project with a role
 projectRouter.post("/project/join/:projectId", userAuth, async (req, res) => {
@@ -330,40 +396,43 @@ projectRouter.get(
   }
 );
 // Toggle project status (open/closed)
-projectRouter.patch("/project/:projectId/status", userAuth, async (req, res) => {
-  try {
-    const loggedUser = req.user;
-    const { projectId } = req.params;
-    const { status } = req.body; // expected to be "open" or "closed"
+projectRouter.patch(
+  "/project/:projectId/status",
+  userAuth,
+  async (req, res) => {
+    try {
+      const loggedUser = req.user;
+      const { projectId } = req.params;
+      const { status } = req.body;
 
-    if (!status || (status !== "open" && status !== "closed")) {
-      return res.status(400).json({ message: "Invalid status provided!" });
+      if (!status || (status !== "open" && status !== "closed")) {
+        return res.status(400).json({ message: "Invalid status provided!" });
+      }
+
+      // Find the project
+      const project = await Project.findById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found!" });
+      }
+
+      // Only the creator can toggle the status
+      if (project.createdBy.toString() !== loggedUser._id.toString()) {
+        return res.status(403).json({ message: "Access denied!" });
+      }
+
+      // Update project status
+      project.status = status;
+      await project.save();
+
+      res.json({
+        message: "Project status updated successfully",
+        data: project,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
-
-    // Find the project
-    const project = await Project.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found!" });
-    }
-
-    // Only the creator can toggle the status
-    if (project.createdBy.toString() !== loggedUser._id.toString()) {
-      return res.status(403).json({ message: "Access denied!" });
-    }
-
-    // Update project status
-    project.status = status;
-    await project.save();
-
-    res.json({
-      message: "Project status updated successfully",
-      data: project,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
-});
-
+);
 
 projectRouter.get(
   "/project/:projectId/requests/pending",
@@ -824,7 +893,10 @@ projectRouter.get("/projects/my-collaborations", userAuth, async (req, res) => {
       .populate("collaborators", "firstName lastName emailId photoUrl");
 
     if (myCollaborations.length === 0) {
-      return res.json({ message: "No projects found where you are a collaborator.", data: [] });
+      return res.json({
+        message: "No projects found where you are a collaborator.",
+        data: [],
+      });
     }
 
     res.json({
@@ -836,8 +908,5 @@ projectRouter.get("/projects/my-collaborations", userAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
 
 module.exports = projectRouter;

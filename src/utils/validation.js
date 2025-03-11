@@ -13,7 +13,7 @@ const validateSignUpData = (req) => {
   }
 };
 
-const vaidateProfileEditData =(req)=>{
+const validateProfileEditData = (req) => {
   const allowedUpdates = [
     "skills",
     "photoUrl",
@@ -21,17 +21,16 @@ const vaidateProfileEditData =(req)=>{
     "gender",
     "age",
     "firstName",
-    "LastName",
+    "lastName",
     "experience",
+    "interests"
   ];
-
   const isUpdateAllowed = Object.keys(req.body).every((k) =>
     allowedUpdates.includes(k)
   );
   return isUpdateAllowed;
-}
-
+};
 module.exports = {
   validateSignUpData,
-  vaidateProfileEditData
+  validateProfileEditData
 };
