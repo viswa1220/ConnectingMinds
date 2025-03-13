@@ -129,7 +129,7 @@ projectRouter.get("/projects/saved", userAuth, async (req, res) => {
       $and: [{ _id: { $in: savedIds } }, { _id: { $nin: ignored } }],
       status: "open",
     })
-      .populate("createdBy", "firstName lastName emailId")
+      .populate("createdBy", "firstName lastName emailId photoUrl")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -233,7 +233,7 @@ projectRouter.get("/projects/my-projects", userAuth, async (req, res) => {
       .limit(parseInt(limit))
       .skip(skip)
       .sort({ createdAt: -1 }) // Sort by newest first
-      .populate("collaborators", "firstName lastName emailId"); // Get collaborator info
+      .populate("collaborators", "firstName lastName emailId photoUrl"); // Get collaborator info
 
     res.json({
       message: "Your projects fetched successfully!",
@@ -250,8 +250,8 @@ projectRouter.get("/project/:projectId", userAuth, async (req, res) => {
 
     // Fetch project details
     const project = await Project.findById(projectId)
-      .populate("createdBy", "firstName lastName emailId")
-      .populate("collaborators", "firstName lastName emailId");
+      .populate("createdBy", "firstName lastName emailId photoUrl")
+      .populate("collaborators", "firstName lastName emailId photoUrl");
 
     if (!project) {
       return res.status(404).json({ message: "Project not found!" });
@@ -261,7 +261,7 @@ projectRouter.get("/project/:projectId", userAuth, async (req, res) => {
     const joinRequests = await ProjectJoinRequest.find({
       projectId,
       status: "pending",
-    }).populate("userId", "firstName lastName emailId");
+    }).populate("userId", "firstName lastName emailId photoUrl");
 
     res.json({
       message: "Project details fetched successfully",
@@ -384,7 +384,7 @@ projectRouter.get(
       const joinRequests = await ProjectJoinRequest.find({
         projectId,
         status: "pending",
-      }).populate("userId", "firstName lastName emailId");
+      }).populate("userId", "firstName lastName emailId photoUrl");
 
       res.json({
         message: "Join requests fetched successfully!",
