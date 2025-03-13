@@ -39,23 +39,29 @@ authRouter.post("/signup", async (req, res) => {
 authRouter.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    const user = await User.findOne({ emailId: emailId });
+    const user = await User.findOne({ emailId });
     if (!user) {
       throw new Error("User Not Found");
     }
-    const isPasswordvalid = await user.validatePassword(password);
-    if (isPasswordvalid) {
+    const isPasswordValid = await user.validatePassword(password);
+    if (isPasswordValid) {
       const token = await user.getJWT();
-      res.cookie("token", token);
-
-      res.send(user);
+      // Set cookie options without using NODE_ENV
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: true,       // Always secure (requires HTTPS)
+        sameSite: "None",   // Allows cross-site cookies
+      });
+      res.status(200).json({ message: "Login successful", user });
     } else {
       throw new Error("Password doesn't match");
     }
   } catch (err) {
-    res.status(401).send("Error :" + err.message);
+    res.status(401).json({ message: "Error: " + err.message });
   }
 });
+
+
 
 authRouter.post("/logout", async (req, res) => {
   try {
