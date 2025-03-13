@@ -65,14 +65,19 @@ authRouter.post("/login", async (req, res) => {
 
 authRouter.post("/logout", async (req, res) => {
   try {
-    res
-      .cookie("token", null, {
-        expires: new Date(Date.now()),
-      })
-      .send("Logout Success");
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: true,  // Ensure it's secure for production
+      sameSite: "None", // Cross-site support
+      expires: new Date(0), // Force expiration
+      domain: ".thoughtsunite.com", // Match your domain
+      path: "/",
+    });
+    res.status(200).json({ message: "Logout Success" });
   } catch (err) {
-    res.status(401).send("Error  :" + err.message);
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 module.exports = authRouter;
