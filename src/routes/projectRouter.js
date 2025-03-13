@@ -92,7 +92,7 @@ projectRouter.get("/projects/feed", userAuth, async (req, res) => {
     filter._id = { $nin: [...requestedProjectIds, ...ignored] };
 
     const projects = await Project.find(filter)
-      .populate("createdBy", "firstName lastName emailId")
+      .populate("createdBy", "firstName lastName emailId photoUrl")
       .limit(parseInt(limit))
       .skip(skip)
       .sort({ createdAt: -1 });
