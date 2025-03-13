@@ -46,12 +46,12 @@ authRouter.post("/login", async (req, res) => {
     const isPasswordValid = await user.validatePassword(password);
     if (isPasswordValid) {
       const token = await user.getJWT();
-      // Set cookie options without using NODE_ENV
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,       // Always secure (requires HTTPS)
-        sameSite: "None",   // Allows cross-site cookies
+        secure: true,
+        sameSite: "None",
       });
+      console.log("Cookie set successfully"); // ✅ Add this to verify
       res.status(200).json({ message: "Login successful", user });
     } else {
       throw new Error("Password doesn't match");
