@@ -272,4 +272,29 @@ requestRouter.get("/people/connections", userAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// New route to fetch only received connection requests
+requestRouter.get("/people/requests/received", userAuth, async (req, res) => {
+  try {
+    const loggedUser = req.user;
+    const receivedRequests = await ConnectionRequest.find({
+      toUserId: loggedUser._id,
+      status: "pending",
+      type: "people"
+    })
+      .populate("fromUserId", "firstName lastName emailId photoUrl techStack experience about skills");
+    
+    if (receivedRequests.length === 0) {
+      return res.json({ message: "No received requests found", data: [] });
+    }
+    
+    res.json({
+      message: "Received requests fetched successfully",
+      data: receivedRequests,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = requestRouter;
