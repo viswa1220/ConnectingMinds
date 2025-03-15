@@ -138,7 +138,7 @@ userRouter.get("/api/user/:userId", userAuth, async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const user = await User.findById(userId).select("firstName lastName emailId photoUrl");
+    const user = await User.findById(userId).select("firstName lastName emailId photoUrl skills interest");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json({ message: "User fetched successfully", data: user });
   } catch (err) {
