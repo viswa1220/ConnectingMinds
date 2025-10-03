@@ -47,12 +47,14 @@ authRouter.post("/login", async (req, res) => {
     if (isPasswordValid) {
       const token = await user.getJWT();
       res.cookie("token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-      });
-      console.log("Cookie set successfully"); // ✅ Add this to verify
-      res.status(200).json({ message: "Login successful", user });
+  httpOnly: true,
+  secure: true,           // ✅ required for HTTPS
+  sameSite: "None",       // ✅ required for cross-site
+  path: "/",              // ✅ needed for mobile browsers
+  maxAge: 24 * 60 * 60 * 1000 // ✅ 1 day
+});
+console.log("Cookie set successfully");
+res.status(200).json({ message: "Login successful", user });
     } else {
       throw new Error("Password doesn't match");
     }
